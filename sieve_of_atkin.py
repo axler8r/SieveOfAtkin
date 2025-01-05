@@ -4,7 +4,6 @@ import mmap
 from bitarray import bitarray
 import os
 import concurrent.futures
-from typing import List
 
 class PrimeSieve:
     def __init__(self, filename="primes.bin"):
@@ -52,14 +51,14 @@ class PrimeSieve:
                     base_sieve[j] = 0
                     
         # Get list of base primes
-        base_primes = [i for i in range(2, sqrt_limit + 1) if base_sieve[i]]
+        base_primes: list[int] = [i for i in range(2, sqrt_limit + 1) if base_sieve[i]]
         print(f"Generated {len(base_primes)} base primes up to {sqrt_limit}")
         
         # Step 2: Process larger numbers in segments
         # Choose segment size to balance memory usage and parallelization efficiency
         segment_size = 1_000_000  # 1M numbers per segment
-        num_segments = (limit - sqrt_limit + segment_size - 1) // segment_size
-        
+        num_segments: int = (limit - sqrt_limit + segment_size - 1) // segment_size
+
         # Initialize final sieve
         final_sieve = bitarray(limit + 1)
         final_sieve.setall(0)
@@ -72,8 +71,8 @@ class PrimeSieve:
         
         # Process segments in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = []
-            
+            futures: list = []
+
             for i in range(num_segments):
                 segment_start = sqrt_limit + i * segment_size
                 current_segment_size = min(segment_size, limit - segment_start + 1)
@@ -104,8 +103,8 @@ class PrimeSieve:
         with open(self.filename, 'wb') as f:
             f.write(limit.to_bytes(8, byteorder='big'))
             final_sieve.tofile(f)
-            
-        prime_count = final_sieve.count(1)
+
+        prime_count: int = final_sieve.count(1)
         print(f"Generated {prime_count} prime numbers up to {limit}")
         print(f"File size: {os.path.getsize(self.filename) / (1024*1024):.2f} MB")
 
@@ -141,7 +140,7 @@ class PrimeSieve:
             self._open_mmap()
 
             # Read the limit
-            limit = int.from_bytes(self._mmap[0:8], byteorder="big")
+            limit: int = int.from_bytes(self._mmap[0:8], byteorder="big")
 
             if number > limit:
                 raise ValueError(
@@ -149,11 +148,11 @@ class PrimeSieve:
                 )
 
             # Calculate byte and bit position
-            byte_offset = 8 + number // 8
-            bit_offset = number % 8
+            byte_offset: int = 8 + number // 8
+            bit_offset: int = number % 8
 
             # Read the byte and check the specific bit
-            byte = self._mmap[byte_offset]
+            byte: int = self._mmap[byte_offset]
             return bool(byte & (1 << (7 - bit_offset)))
 
         except FileNotFoundError:
@@ -169,7 +168,7 @@ class PrimeSieve:
             self._open_mmap()
 
             # Read the limit
-            limit = int.from_bytes(self._mmap[0:8], byteorder="big")
+            limit: int = int.from_bytes(self._mmap[0:8], byteorder="big")
 
             if end > limit:
                 raise ValueError(
@@ -177,8 +176,8 @@ class PrimeSieve:
                 )
 
             # Create a bitarray and read relevant portion from file
-            byte_start = 8 + start // 8
-            byte_end = 8 + (end // 8) + 1
+            byte_start: int = 8 + start // 8
+            byte_end: int = 8 + (end // 8) + 1
 
             sieve = bitarray()
             self._mmap.seek(byte_start)
@@ -222,7 +221,7 @@ def main():
         help="File to store/read prime numbers",
     )
 
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
     with PrimeSieve(args.file) as sieve:
         try:
