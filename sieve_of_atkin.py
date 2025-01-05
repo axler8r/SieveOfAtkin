@@ -1,11 +1,10 @@
-import math
 import argparse
+import math
+import mmap
 from bitarray import bitarray
 import os
 import concurrent.futures
-import mmap
-from typing import List, Tuple
-
+from typing import List
 
 class PrimeSieve:
     def __init__(self, filename="primes.bin"):
@@ -13,105 +12,105 @@ class PrimeSieve:
         self._mmap = None
         self._file = None
 
-    def _estimate_primes_in_range(self, x1: int, x2: int) -> int:
+    def _segment_sieve(self, segment_start: int, segment_size: int, sqrt_limit: int, base_primes: List[int]) -> bitarray:
         """
-        Use the prime number theorem to estimate the number of primes
-        in range [x1, x2]. The theorem states that π(x) ≈ x/ln(x).
+        Generate primes in a segment using base primes for crossing off.
+        This is the key to efficient parallelization - each segment can be processed independently
+        once we have the base primes up to sqrt(limit).
         """
-        if x1 < 2:
-            x1 = 2
-        return int(x2 / math.log(x2) - x1 / math.log(x1))
-
-    def _generate_range(self, start: int, end: int, sieve: bitarray) -> None:
-        """
-        Generate prime numbers in the given range using Sieve of Atkin.
-        Updates the provided bitarray in-place.
-        """
-        sqrt_end = int(math.sqrt(end))
-
-        for x in range(1, sqrt_end + 1):
-            for y in range(1, sqrt_end + 1):
-                # First quadratic form: 4x² + y²
-                n = 4 * x * x + y * y
-                if start <= n <= end and n % 12 in (1, 5):
-                    sieve[n] = not sieve[n]
-
-                # Second quadratic form: 3x² + y²
-                n = 3 * x * x + y * y
-                if start <= n <= end and n % 12 == 7:
-                    sieve[n] = not sieve[n]
-
-                # Third quadratic form: 3x² - y²
-                if x > y:
-                    n = 3 * x * x - y * y
-                    if start <= n <= end and n % 12 == 11:
-                        sieve[n] = not sieve[n]
-
-        # Mark squares and multiples as non-prime
-        for x in range(5, sqrt_end + 1):
-            if sieve[x]:
-                for y in range(max(x * x, (start + x - 1) // x * x), end + 1, x * x):
-                    sieve[y] = 0
-
-    def _divide_work(self, limit: int, num_threads: int) -> List[Tuple[int, int]]:
-        """
-        Divide work among threads trying to ensure each thread processes
-        approximately the same number of primes based on the prime number theorem.
-        """
-        total_primes = self._estimate_primes_in_range(2, limit)
-        primes_per_thread = total_primes // num_threads
-
-        ranges = []
-        start = 2
-        for i in range(num_threads - 1):
-            # Binary search to find end point that gives desired number of primes
-            left, right = start, limit
-            while left < right:
-                mid = (left + right) // 2
-                primes_in_range = self._estimate_primes_in_range(start, mid)
-                if primes_in_range < primes_per_thread:
-                    left = mid + 1
-                else:
-                    right = mid
-            ranges.append((start, right))
-            start = right + 1
-
-        ranges.append((start, limit))
-        return ranges
+        # Initialize segment
+        segment = bitarray(segment_size)
+        segment.setall(1)
+        
+        # Adjust for segment offset
+        segment_end = segment_start + segment_size
+        
+        # Cross off multiples of base primes
+        for prime in base_primes:
+            # Find first multiple of prime in segment
+            first_multiple = math.ceil(segment_start / prime) * prime
+            # Cross off all multiples in segment
+            for multiple in range(first_multiple, segment_end, prime):
+                if multiple >= segment_start:
+                    segment[multiple - segment_start] = 0
+                    
+        return segment
 
     def generate(self, limit: int, num_threads: int = os.cpu_count()):
         """
-        Generate prime numbers up to the specified limit using multiple threads.
+        Generate prime numbers up to the specified limit using segmented sieve approach.
         """
-        # Initialize the sieve
-        sieve = bitarray(limit + 1)
-        sieve.setall(0)
-
-        # Add 2 and 3 explicitly
-        sieve[2] = 1
-        sieve[3] = 1
-
-        # Divide work among threads
-        ranges = self._divide_work(limit, num_threads)
-
-        # Process ranges concurrently
+        print("Initializing...")
+        
+        # Step 1: Generate small primes up to sqrt(limit) using basic Sieve of Eratosthenes
+        sqrt_limit = int(math.sqrt(limit))
+        base_sieve = bitarray(sqrt_limit + 1)
+        base_sieve.setall(1)
+        for i in range(2, int(math.sqrt(sqrt_limit)) + 1):
+            if base_sieve[i]:
+                for j in range(i * i, sqrt_limit + 1, i):
+                    base_sieve[j] = 0
+                    
+        # Get list of base primes
+        base_primes = [i for i in range(2, sqrt_limit + 1) if base_sieve[i]]
+        print(f"Generated {len(base_primes)} base primes up to {sqrt_limit}")
+        
+        # Step 2: Process larger numbers in segments
+        # Choose segment size to balance memory usage and parallelization efficiency
+        segment_size = 1_000_000  # 1M numbers per segment
+        num_segments = (limit - sqrt_limit + segment_size - 1) // segment_size
+        
+        # Initialize final sieve
+        final_sieve = bitarray(limit + 1)
+        final_sieve.setall(0)
+        
+        # Copy base primes to final sieve
+        for prime in base_primes:
+            final_sieve[prime] = 1
+            
+        print(f"Processing {num_segments} segments using {num_threads} threads...")
+        
+        # Process segments in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = [
-                executor.submit(self._generate_range, start, end, sieve)
-                for start, end in ranges
-            ]
-            # Wait for all threads to complete
-            concurrent.futures.wait(futures)
-
+            futures = []
+            
+            for i in range(num_segments):
+                segment_start = sqrt_limit + i * segment_size
+                current_segment_size = min(segment_size, limit - segment_start + 1)
+                
+                future = executor.submit(
+                    self._segment_sieve,
+                    segment_start,
+                    current_segment_size,
+                    sqrt_limit,
+                    base_primes
+                )
+                futures.append((segment_start, future))
+                
+            # Collect results
+            for segment_start, future in futures:
+                try:
+                    segment = future.result()
+                    # Copy segment to final sieve
+                    segment_size = len(segment)
+                    final_sieve[segment_start:segment_start + segment_size] = segment
+                    print(f"Processed segment starting at {segment_start}", end='\r')
+                except Exception as e:
+                    print(f"Error processing segment {segment_start}: {e}")
+                    
+        print("\nSaving results...")
+        
         # Save to file
-        with open(self.filename, "wb") as f:
-            # Write limit as 8-byte integer
-            f.write(limit.to_bytes(8, byteorder="big"))
-            sieve.tofile(f)
-
-        prime_count = sieve.count(1)
+        with open(self.filename, 'wb') as f:
+            f.write(limit.to_bytes(8, byteorder='big'))
+            final_sieve.tofile(f)
+            
+        prime_count = final_sieve.count(1)
         print(f"Generated {prime_count} prime numbers up to {limit}")
         print(f"File size: {os.path.getsize(self.filename) / (1024*1024):.2f} MB")
+
+    # [Rest of the code remains unchanged: _open_mmap, _close_mmap, __enter__, __exit__,
+    #  is_prime, list_primes, and main() function stay the same]
 
     def _open_mmap(self):
         """Open memory-mapped file if not already open."""
