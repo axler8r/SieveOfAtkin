@@ -1,15 +1,16 @@
 """Prime number generator and checker using a segmented sieve algorithm."""
 
-import argparse
+from bitarray import bitarray
+
+
+import concurrent.futures
 import math
 import mmap
-from bitarray import bitarray
 import os
-import concurrent.futures
 import pathlib
 
 
-class PrimeSieve:
+class SieveOfAtkin:
     """PrimeSieve implements a segmented sieve algorithm to generate prime numbers up to a specified limit.
 
     It supports parallel processing to improve efficiency and can save the generated primes to a file for later use. The class also provides methods to check if a number is prime and to list all primes within a specified range.
@@ -39,7 +40,7 @@ class PrimeSieve:
         is_prime(number):
             Checks if the given number is prime by examining the appropriate bit in the memory-mapped file.
 
-        list_primes(start, end):
+        list_primes(start, stop):
             Lists all prime numbers within the specified range.
 
     """
@@ -159,7 +160,7 @@ class PrimeSieve:
                     self._segment_sieve,
                     segment_start,
                     current_segment_size,
-                    sqrt_limit,
+                    # sqrt_limit,
                     base_primes,
                 )
                 futures.append((segment_start, future))
@@ -184,7 +185,9 @@ class PrimeSieve:
 
         prime_count: int = final_sieve.count(1)
         print(f"Generated {prime_count} prime numbers up to {limit}")
-        print(f"File size: {pathlib.Path.getsize(self.filename) / (1024*1024):.2f} MB")
+        print(
+            f"File size: {pathlib.Path(self.filename).stat().st_size / (1024*1024):.2f} MB"
+        )
 
     def _open_mmap(self) -> None:
         """Open a memory-mapped file if it is not already open.
@@ -220,7 +223,7 @@ class PrimeSieve:
             self._mmap = None
             self._file = None
 
-    def __enter__(self) -> "PrimeSieve":
+    def __enter__(self) -> "SieveOfAtkin":
         """Enter the runtime context related to this object.
 
         This method is called when the execution flow enters the context of the
@@ -286,18 +289,18 @@ class PrimeSieve:
                 "Prime numbers file not found. Run generate mode first."
             )
 
-    def list_primes(self, start: int, end: int) -> list[int]:
+    def list_primes(self, start: int, stop: int) -> list[int]:
         """List all prime numbers within the specified range.
 
         Args:
-            start (int): The starting value of the range.
-            end (int): The ending value of the range.
+            start (int): The first value of the range.
+            stop (int): The last value of the range.
 
         Returns:
             list[int]: A list of prime numbers within the specified range.
 
         Raises:
-            ValueError: If the end value is beyond the generated limit.
+            ValueError: If the last value is beyond the generated limit.
             FileNotFoundError: If the prime numbers file is not found.
 
         """
@@ -307,82 +310,23 @@ class PrimeSieve:
             # Read the limit
             limit: int = int.from_bytes(self._mmap[0:8], byteorder="big")
 
-            if end > limit:
+            if stop > limit:
                 raise ValueError(
-                    f"End value {end} is beyond the generated limit of {limit}"
+                    f"End value {stop} is beyond the generated limit of {limit}"
                 )
 
             # Create a bitarray and read relevant portion from file
             byte_start: int = 8 + start // 8
-            byte_end: int = 8 + (end // 8) + 1
+            byte_stop: int = 8 + (stop // 8) + 1
 
             sieve = bitarray()
             self._mmap.seek(byte_start)
-            sieve.frombytes(self._mmap[byte_start:byte_end])
+            sieve.frombytes(self._mmap[byte_start:byte_stop])
 
             # Get all prime numbers in range
-            return [i for i in range(max(2, start), end + 1) if self.is_prime(i)]
+            return [i for i in range(max(2, start), stop + 1) if self.is_prime(i)]
 
         except FileNotFoundError:
             raise FileNotFoundError(
                 "Prime numbers file not found. Run generate mode first."
             )
-
-
-def main() -> None:
-    """Generate, check or list prime number(s)."""
-    parser = argparse.ArgumentParser(description="Prime number generator and checker")
-    parser.add_argument(
-        "mode",
-        choices=["generate", "is", "list"],
-        help="Operation mode: generate primes, check if prime, or list primes",
-    )
-    parser.add_argument("--number", type=int, help="Number to check for primality")
-    parser.add_argument("--start", type=int, help="Start of range for listing primes")
-    parser.add_argument("--end", type=int, help="End of range for listing primes")
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=10_000_000_000,
-        help="Upper limit for prime generation",
-    )
-    parser.add_argument(
-        "--threads",
-        type=int,
-        default=os.cpu_count(),
-        help="Number of threads for generation",
-    )
-    parser.add_argument(
-        "--file",
-        type=str,
-        default="primes.bin",
-        help="File to store/read prime numbers",
-    )
-
-    args: argparse.Namespace = parser.parse_args()
-
-    with PrimeSieve(args.file) as sieve:
-        try:
-            if args.mode == "generate":
-                sieve.generate(args.limit, args.threads)
-            elif args.mode == "is":
-                if args.number is None:
-                    print("Please provide a number to check with --number")
-                    return
-                is_prime = sieve.is_prime(args.number)
-                print(f"{args.number} is {'prime' if is_prime else 'not prime'}")
-            elif args.mode == "list":
-                if args.start is None or args.end is None:
-                    print("Please provide both --start and --end for listing primes")
-                    return
-                primes = sieve.list_primes(args.start, args.end)
-                print(f"Primes in range [{args.start}, {args.end}]:")
-                print(primes)
-                print(f"Count: {len(primes)}")
-
-        except ValueError as e:
-            print(f"Error: {e}")
-
-
-if __name__ == "__main__":
-    main()
