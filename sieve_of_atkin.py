@@ -6,6 +6,7 @@ import mmap
 from bitarray import bitarray
 import os
 import concurrent.futures
+import pathlib
 
 
 class PrimeSieve:
@@ -83,12 +84,12 @@ class PrimeSieve:
         segment.setall(1)
 
         # Adjust for segment offset
-        segment_end = segment_start + segment_size
+        segment_end: int = segment_start + segment_size
 
         # Cross off multiples of base primes
         for prime in base_primes:
             # Find first multiple of prime in segment
-            first_multiple = math.ceil(segment_start / prime) * prime
+            first_multiple: int = math.ceil(segment_start / prime) * prime
             # Cross off all multiples in segment
             for multiple in range(first_multiple, segment_end, prime):
                 if multiple >= segment_start:
@@ -148,7 +149,7 @@ class PrimeSieve:
 
         # Process segments in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures: list = []
+            futures: list[tuple[int, concurrent.futures.Future[bitarray]]] = []
 
             for i in range(num_segments):
                 segment_start: int = sqrt_limit + i * segment_size
@@ -177,13 +178,13 @@ class PrimeSieve:
         print("\nSaving results...")
 
         # Save to file
-        with open(self.filename, "wb") as f:
+        with pathlib.Path.open(self.filename, "wb") as f:
             f.write(limit.to_bytes(8, byteorder="big"))
             final_sieve.tofile(f)
 
         prime_count: int = final_sieve.count(1)
         print(f"Generated {prime_count} prime numbers up to {limit}")
-        print(f"File size: {os.path.getsize(self.filename) / (1024*1024):.2f} MB")
+        print(f"File size: {pathlib.Path.getsize(self.filename) / (1024*1024):.2f} MB")
 
     def _open_mmap(self) -> None:
         """Open a memory-mapped file if it is not already open.
@@ -199,7 +200,7 @@ class PrimeSieve:
         """
         try:
             if self._mmap is None:
-                self._file: os.BufferedReader = open(self.filename, "rb")
+                self._file: os.BufferedReader = pathlib.Path.open(self.filename, "rb")
                 self._mmap = mmap.mmap(self._file.fileno(), 0, access=mmap.ACCESS_READ)
         except FileNotFoundError:
             raise FileNotFoundError(

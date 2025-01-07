@@ -10,4 +10,5 @@ dependencies = [
 [tool.ruff.lint]
 select = [
     "D",
+    "PTH",
 ]
