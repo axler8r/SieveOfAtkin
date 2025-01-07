@@ -7,8 +7,15 @@ requires-python = ">=3.12"
 dependencies = [
     "bitarray>=3.0.0",
 ]
+
+[tool.ruff]
+
+[tool.ruff.format]
+quote-style = "double"
+
 [tool.ruff.lint]
 select = [
     "D",
+    "N",
     "PTH",
 ]
