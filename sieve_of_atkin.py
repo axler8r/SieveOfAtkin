@@ -1,3 +1,5 @@
+"""Prime number generator and checker using a segmented sieve algorithm."""
+
 import argparse
 import math
 import mmap
@@ -7,9 +9,9 @@ import concurrent.futures
 
 
 class PrimeSieve:
-    """
-    PrimeSieve is a class that implements a segmented sieve algorithm to generate prime numbers up to a specified limit. It supports parallel processing to improve efficiency and can save the generated primes to a file for later use. The class also provides methods to check if a number is prime and to list all primes within a specified range.
+    """PrimeSieve implements a segmented sieve algorithm to generate prime numbers up to a specified limit.
 
+    It supports parallel processing to improve efficiency and can save the generated primes to a file for later use. The class also provides methods to check if a number is prime and to list all primes within a specified range.
 
     Methods:
         __init__(filename="primes.bin"):
@@ -38,11 +40,11 @@ class PrimeSieve:
 
         list_primes(start, end):
             Lists all prime numbers within the specified range.
+
     """
 
     def __init__(self, filename="primes.bin") -> None:
-        """
-        Initializes the SieveOfAtkin instance.
+        """Initialize SieveOfAtkin.
 
         Args:
             filename (str): The name of the file to store the primes. Defaults to "primes.bin".
@@ -51,6 +53,7 @@ class PrimeSieve:
             filename (str): The name of the file to store the primes.
             _mmap: Memory-mapped file object, initially set to None.
             _file: File object, initially set to None.
+
         """
         self.filename: str = filename
         self._mmap = None
@@ -62,9 +65,9 @@ class PrimeSieve:
         segment_size: int,
         base_primes: list[int],
     ) -> bitarray:
-        """
-        This method initializes a segment of a given size and marks non-prime numbers
-        within that segment by crossing off multiples of the provided base primes.
+        """Initialize a segment of a given size.
+
+        Mark non-prime numbers within that segment by crossing off multiples of the provided base primes.
 
         Args:
             segment_start (int): The starting index of the segment.
@@ -73,6 +76,7 @@ class PrimeSieve:
 
         Returns:
             bitarray: A bitarray where prime indices are set to 1 and non-prime indices are set to 0.
+
         """
         # Initialize segment
         segment = bitarray(segment_size)
@@ -93,8 +97,7 @@ class PrimeSieve:
         return segment
 
     def generate(self, limit: int, num_threads: int = os.cpu_count()) -> None:
-        """
-        Generate prime numbers up to the specified limit using a segmented sieve approach.
+        """Generate prime numbers up to the specified limit.
 
         Args:
             limit (int): The upper limit up to which prime numbers are to be generated.
@@ -111,6 +114,7 @@ class PrimeSieve:
 
         Raises:
             Exception: If there is an error processing any segment.
+
         """
         print("Initializing...")
 
@@ -182,8 +186,7 @@ class PrimeSieve:
         print(f"File size: {os.path.getsize(self.filename) / (1024*1024):.2f} MB")
 
     def _open_mmap(self) -> None:
-        """
-        Open a memory-mapped file if it is not already open.
+        """Open a memory-mapped file if it is not already open.
 
         This method attempts to open a memory-mapped file for reading. If the file
         is not found, it raises a FileNotFoundError with a message indicating that
@@ -192,6 +195,7 @@ class PrimeSieve:
 
         Raises:
             FileNotFoundError: If the prime numbers file is not found.
+
         """
         try:
             if self._mmap is None:
@@ -203,8 +207,7 @@ class PrimeSieve:
             )
 
     def _close_mmap(self) -> None:
-        """
-        Close the memory-mapped file if it is open.
+        """Close the memory-mapped file if it is open.
 
         This method checks if the memory-mapped file is currently open. If it is,
         the method closes both the memory-mapped file and the associated file,
@@ -217,8 +220,7 @@ class PrimeSieve:
             self._file = None
 
     def __enter__(self) -> "PrimeSieve":
-        """
-        Enter the runtime context related to this object.
+        """Enter the runtime context related to this object.
 
         This method is called when the execution flow enters the context of the
         `with` statement. It opens the memory-mapped file and returns the
@@ -226,13 +228,13 @@ class PrimeSieve:
 
         Returns:
             PrimeSieve: The instance of the PrimeSieve class.
+
         """
         self._open_mmap()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """
-        Exit the runtime context related to this object.
+        """Exit the runtime context related to this object.
 
         This method is called when the 'with' statement is used. It ensures that
         the memory-mapped file is properly closed when exiting the context.
@@ -241,14 +243,12 @@ class PrimeSieve:
             exc_type (Optional[Type[BaseException]]): The exception type if an exception was raised, otherwise None.
             exc_val (Optional[BaseException]): The exception instance if an exception was raised, otherwise None.
             exc_tb (Optional[TracebackType]): The traceback object if an exception was raised, otherwise None.
+
         """
         self._close_mmap()
 
     def is_prime(self, number: int) -> bool:
-        """
-        This method opens a memory-mapped file that contains precomputed prime numbers
-        up to a certain limit. It then checks if the given number is within this limit
-        and determines if it is prime by examining the appropriate bit in the file.
+        """Check if the given number is prime.
 
         Args:
             number (int): The number to check for primality.
@@ -259,6 +259,7 @@ class PrimeSieve:
         Raises:
             ValueError: If the number is beyond the generated limit.
             FileNotFoundError: If the prime numbers file is not found.
+
         """
         try:
             self._open_mmap()
@@ -285,7 +286,8 @@ class PrimeSieve:
             )
 
     def list_primes(self, start: int, end: int) -> list[int]:
-        """
+        """List all prime numbers within the specified range.
+
         Args:
             start (int): The starting value of the range.
             end (int): The ending value of the range.
@@ -296,6 +298,7 @@ class PrimeSieve:
         Raises:
             ValueError: If the end value is beyond the generated limit.
             FileNotFoundError: If the prime numbers file is not found.
+
         """
         try:
             self._open_mmap()
@@ -326,6 +329,7 @@ class PrimeSieve:
 
 
 def main() -> None:
+    """Generate, check or list prime number(s)."""
     parser = argparse.ArgumentParser(description="Prime number generator and checker")
     parser.add_argument(
         "mode",
