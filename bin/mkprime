@@ -1,14 +1,31 @@
 #! /usr/bin/env zsh
 
-local _limit
-if [[ $# -eq 1 && "$1" =~ ^[1-9][0-9]*$ ]]; then
-    _limit="$1"
-else
-    unset _limit
+local _limit=1000000
+local _threads=$(nproc)
+local _debug=0
+local -a limit threads debug  # explicitly declare as arrays
+zparseopts -D -E -- -limit:=limit -threads:=threads -debug=debug
+
+[[ -n ${limit[-1]} ]] && _limit=${limit[-1]}
+[[ -n ${threads[-1]} ]] && _threads=${threads[-1]}
+[[ ${#debug[@]} -gt 0 ]] && _debug=1
+
+# Validate _limit
+if ! [[ $_limit =~ ^[1-9][0-9]*$ ]] || (( _limit < 1 )); then
+    echo "Error: limit must be a positive integer" >&2
+    return 1
 fi
 
-if [[ -n $_limit ]]; then
-    python3 main.py generate --limit $_limit
-else
-    python3 main.py generate
+# Validate _threads
+if ! [[ $_threads =~ ^[1-9][0-9]*$ ]] || (( _threads < 1 )); then
+    echo "Error: threads must be a positive integer" >&2
+    return 1
 fi
+
+# Debug output if flag is set
+if (( _debug )); then
+    printf "[DEBUG] limit: %d\n" $_limit
+    printf "[DEBUG] threads: %d\n" $_threads
+fi
+
+PYTHONPATH="$(dirname $"0")/sieve" python3 -m sieve.main generate --limit $_limit --threads $_threads
