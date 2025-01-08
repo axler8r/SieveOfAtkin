@@ -1,0 +1,14 @@
+#! /usr/bin/env zsh
+
+local _limit
+if [[ $# -eq 1 && "$1" =~ ^[1-9][0-9]*$ ]]; then
+    _limit="$1"
+else
+    unset _limit
+fi
+
+if [[ -n $_limit ]]; then
+    python3 main.py generate --limit $_limit
+else
+    python3 main.py generate
+fi
