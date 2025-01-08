@@ -1,15 +1,30 @@
 #! /usr/bin/env zsh
 
 local _from _to
-if [[ $# -eq 2 && "$1" =~ ^[0-9]+$ && "$2" =~ ^[0-9]+$ ]]; then
-    _from="$1"
-    _to="$2"
-else
-    unset _from _to
+local _debug=0
+local -a from to debug  # explicitly declare as arrays
+zparseopts -D -E -- -from:=from -to:=to -debug=debug
+
+[[ -n ${from[-1]} ]] && _from=${from[-1]}
+[[ -n ${to[-1]} ]] && _to=${to[-1]}
+[[ ${#debug[@]} -gt 0 ]] && _debug=1
+
+# Validate _from
+if ! [[ $_from =~ ^[1-9][0-9]*$ ]] || (( _from < 1 )); then
+    echo "Error: from must be a positive integer" >&2
+    return 1
 fi
 
-if [[ -n $_from && -n $_to ]]; then
-    python3 main.py list --start $_from --stop $_to
-else
-    echo "Usage: lsprime <from> <to>"
+# Validate _to
+if ! [[ $_to =~ ^[1-9][0-9]*$ ]] || (( _to < 1 )); then
+    echo "Error: to must be a positive integer" >&2
+    return 1
 fi
+
+# Debug output if flag is set
+if (( _debug )); then
+    printf "[DEBUG] from: %d\n" $_from
+    printf "[DEBUG] to: %d\n" $_to
+fi
+
+PYTHONPATH="$(dirname $"0")/sieve" python3 -m sieve.main list --start $_from --stop $_to
