@@ -19,3 +19,8 @@ select = [
     "N",
     "PTH",
 ]
+
+[dependency-groups]
+dev = [
+    "git-cliff>=2.7.0",
+]
