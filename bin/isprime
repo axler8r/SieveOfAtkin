@@ -8,7 +8,7 @@ else
 fi
 
 if [[ -n $_number ]]; then
-    python3 main.py check --number $_number
+    PYTHONPATH="$(dirname $"0")/sieve" python3 -m sieve.main check --number $_number
 else
     echo "Usage: isprime <number>"
 fi

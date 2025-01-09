@@ -4,12 +4,5 @@
 			"path": "."
 		}
 	],
-	"settings": {
-		"explorer.fileNesting.enabled": true,
-		"explorer.fileNesting.patterns": {
-			".shell": "isprime, lsprime, mkprime",
-			".py": "*.py",
-			".license": "LICENSE, README.md",
-		}
-	}
+	"settings": { }
 }

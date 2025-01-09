@@ -72,21 +72,22 @@ def main() -> None:
 
     args: argparse.Namespace = parser.parse_args()
 
-    with SieveOfAtkin(args.file) as sieve:
-        try:
-            if args.mode == "generate":
-                sieve.generate(args.limit, args.threads)
-            elif args.mode == "check":
-                is_prime: bool = sieve.is_prime(args.number)
-                print(f"{args.number} is {'prime' if is_prime else 'not prime'}")
-            elif args.mode == "list":
-                primes: list[int] = sieve.list_primes(args.start, args.stop)
-                print(f"Primes in range [{args.start}, {args.stop}]:")
-                print(primes)
-                print(f"Count: {len(primes)}")
-
-        except ValueError as e:
-            print(f"Error: {e}")
+    if args.mode == "generate":
+        sieve = SieveOfAtkin(args.file)
+        sieve.generate(args.limit, args.threads)
+    else:
+        with SieveOfAtkin(args.file) as sieve:
+            try:
+                if args.mode == "check":
+                    is_prime: bool = sieve.is_prime(args.number)
+                    print(f"{args.number} is {'prime' if is_prime else 'not prime'}")
+                elif args.mode == "list":
+                    primes: list[int] = sieve.list_primes(args.start, args.stop)
+                    print(f"Primes in range [{args.start}, {args.stop}]:")
+                    print(primes)
+                    print(f"Count: {len(primes)}")
+            except ValueError as e:
+                print(f"Error: {e}")
 
 
 if __name__ == "__main__":
