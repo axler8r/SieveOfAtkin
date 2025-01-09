@@ -39,6 +39,13 @@ format:
 	@echo "Format souce code..."
 	ruff format
 
+changelog:
+	@echo "Generate changelog..."
+	cat CHANGELOG.md | sed '1,2d' > .changelog.old
+	git cliff --bump --unreleased > .changelog.new
+	cat .changelog.new .changelog.old > CHANGELOG.md
+	rm .changelog.old .changelog.new
+
 help:
 	@echo "Usage: make [target]"
 	@echo "Targets:"
