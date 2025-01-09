@@ -1,6 +1,37 @@
 # Changelog
 
 
+## 1.0.1
+**2025-01-09**
+
+
+### Updated Features
++ Update `lsprime` driver script
++ Update `mkprime` driver script
+
+
+### Corrected Defects
++ Fix missing primes file check
+
+
+### Build Artefacts
++ Add `pyinstaller`
++ Add `Makefile`
+
+
+### Documentation
++ Update `README.md`
+
+
+### Meta Artefacts
++ Simplify workspace
+
+
+### Refactored Features
++ Organise files
+
+
+
 ## 1.0.0
 **2021-09-26**
 
