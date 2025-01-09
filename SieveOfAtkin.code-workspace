@@ -1,8 +1,31 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": { }
+    "folders": [
+        {
+            "path": ".",
+        },
+    ],
+    "settings": {
+        "files.associations": {
+            "**/bin/*": "shellscript",
+        },
+        "files.exclude": {
+            "**/.DS_Store": true,
+            "**/.ruff_cache": true,
+            "**/Thumbs.db": true,
+            "**/__pycache__": true,
+            ".venv": true,
+            "tags*": true,
+        },
+        "material-icon-theme.folders.associations": {
+            "sieve": "python",
+        },
+    },
+    "extensions": {
+        "recommendations": [
+            "GitHub.copilot",
+            "ms-python.python",
+            "charliermarsh.ruff",
+            "tamasfe.even-better-toml",
+        ],
+    },
 }
