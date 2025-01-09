@@ -15,7 +15,6 @@ get-started:
 	@echo "Get started with the project..."
 	@echo "  'make init' to initialize the project"
 	@echo "  'source .venv/bin/activate' to activate the virtual environment"
-	@echo "  'uv sync' to install the dependencies"
 	@echo "  'bin/help' to see the available commands"
 
 init:

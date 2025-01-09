@@ -26,7 +26,6 @@ To get a local copy up and running follow these simple steps.
     ```shell
     $ make init
     $ source .venv/bin/activate
-    $ uv sync
     ```
 3. Use the application as described in [Shell](#shell), [Python](#python) or
    [Build](#build).
