@@ -1,0 +1,3 @@
+#! /usr/bin/env zsh
+
+PYTHONPATH="$(dirname $"0")/sieve" python3 -m sieve.main --help
